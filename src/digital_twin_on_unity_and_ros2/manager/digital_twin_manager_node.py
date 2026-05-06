@@ -24,9 +24,13 @@ class DigitalTwinManager(Node):
         super().__init__("digital_twin_manager")
 
         self.declare_parameter("ros_ip", "127.0.0.1")
+        self.declare_parameter("ros_tcp_port", 10000)
         self.declare_parameter("respawn_permanent_nodes", True)
 
         self.ros_ip = self.get_parameter("ros_ip").get_parameter_value().string_value
+        self.ros_tcp_port = (
+            self.get_parameter("ros_tcp_port").get_parameter_value().integer_value
+        )
         self.respawn_permanent_nodes = (
             self.get_parameter("respawn_permanent_nodes")
             .get_parameter_value()
@@ -63,6 +67,8 @@ class DigitalTwinManager(Node):
                     "--ros-args",
                     "-p",
                     f"ROS_IP:={self.ros_ip}",
+                    "-p",
+                    f"ROS_TCP_PORT:={self.ros_tcp_port}",
                 ],
             ),
         }

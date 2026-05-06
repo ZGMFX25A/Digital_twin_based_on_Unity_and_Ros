@@ -10,6 +10,11 @@ def generate_launch_description():
         default_value="127.0.0.1",
         description="ROS_IP value passed to ros_tcp_endpoint.",
     )
+    ros_tcp_port_arg = DeclareLaunchArgument(
+        "ros_tcp_port",
+        default_value="10000",
+        description="ROS_TCP_PORT value passed to ros_tcp_endpoint.",
+    )
 
     manager_node = Node(
         package="digital_twin_on_unity_and_ros2",
@@ -19,6 +24,7 @@ def generate_launch_description():
         parameters=[
             {
                 "ros_ip": LaunchConfiguration("ros_ip"),
+                "ros_tcp_port": LaunchConfiguration("ros_tcp_port"),
                 "respawn_permanent_nodes": True,
             }
         ],
@@ -26,5 +32,6 @@ def generate_launch_description():
 
     return LaunchDescription([
         ros_ip_arg,
+        ros_tcp_port_arg,
         manager_node,
     ])
