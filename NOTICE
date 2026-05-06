@@ -1,0 +1,7 @@
+Digital Twin Based on Unity and ROS
+Copyright 2026 HAOYU LUO
+
+This project is licensed under the Apache License, Version 2.0.
+
+This repository depends on Unity-Technologies/ROS-TCP-Endpoint, which is
+distributed under its own license by Unity Technologies.

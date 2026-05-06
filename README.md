@@ -83,4 +83,7 @@ Open a pull request on GitHub and describe:
 
 ## License
 
-This project is licensed under the Apache License 2.0. See [LICENSE](LICENSE).
+Copyright 2026 HAOYU LUO.
+
+This project is licensed under the Apache License 2.0. See [LICENSE](LICENSE)
+and [NOTICE](NOTICE).
