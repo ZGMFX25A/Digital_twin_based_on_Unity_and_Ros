@@ -15,30 +15,30 @@ documented separately as that work progresses.
 
 ---
 
-## Project Overview
+## Architecture
 
 ```text
-URSim / Real UR7e
-  └─► UR ROS 2 Driver  (~/ur_drive/ur_drive_ws)
-        ├─ joint_state_broadcaster       → /joint_states
-        ├─ tcp_pose_broadcaster          → /tcp_pose_broadcaster/pose
-        ├─ io_and_status_controller      → robot_mode / safety_mode / program_running
-        ├─ speed_scaling_state_broadcaster → /speed_scaling_state_broadcaster/speed_scaling
-        └─ force_torque_sensor_broadcaster → /force_torque_sensor_broadcaster/wrench
+URSim (Docker) / Real UR7e
+  └─► Universal Robots ROS 2 Driver
+        ├─ joint_state_broadcaster          → /joint_states
+        ├─ tcp_pose_broadcaster             → /tcp_pose_broadcaster/pose
+        ├─ io_and_status_controller         → robot_mode / safety_mode / program_running
+        ├─ speed_scaling_state_broadcaster  → /speed_scaling_state_broadcaster/speed_scaling
+        └─ force_torque_sensor_broadcaster  → /force_torque_sensor_broadcaster/wrench
 
-  └─► Digital Twin Workspace  (this repository)
-        ├─ joint_state_bridge_ros2unity  → /unity/joint_states   (on-change)
-        ├─ ur_state_bridge_ros2unity     → /unity/tcp_pose        (30 Hz)
-        │                                  /unity/robot_status    (10 Hz)
-        │                                  /unity/wrench          (30 Hz)
-        └─ ros_tcp_endpoint              → TCP port 10000
+  └─► This workspace (digital_twin_on_unity_and_ros2_ws)
+        ├─ joint_state_bridge_ros2unity     → /unity/joint_states   (on-change)
+        ├─ ur_state_bridge_ros2unity        → /unity/tcp_pose        (30 Hz)
+        │                                     /unity/robot_status    (10 Hz)
+        │                                     /unity/wrench          (30 Hz)
+        └─ ros_tcp_endpoint                 → TCP port 10000
 
-  └─► Unity  (ROS-TCP-Connector)
+  └─► Unity (ROS-TCP-Connector)
         subscribes to /unity/* topics
 ```
 
-The digital twin workspace only consumes standard ROS topics from the UR driver.
-The two workspaces are independent and communicate solely through the ROS graph.
+The two workspaces communicate only through the ROS graph. This workspace does
+not depend on any hardcoded path from the UR driver workspace.
 
 ---
 
@@ -56,7 +56,7 @@ src/
 
 ## Published Unity Topics
 
-| Topic | Message type | Upstream source | Publish rate |
+| Topic | Message type | Upstream source | Rate |
 | --- | --- | --- | --- |
 | `/unity/joint_states` | `JointStateUnity` | `/joint_states` | on-change |
 | `/unity/tcp_pose` | `TcpPoseUnity` | `/tcp_pose_broadcaster/pose` | 30 Hz |
@@ -97,40 +97,71 @@ automatically respawns them if they exit:
 
 This workspace targets ROS 2 Humble on Ubuntu 22.04.
 
-### 2. Universal Robots ROS 2 Driver workspace
+### 2. Universal Robots ROS 2 Driver
 
-The UR driver provides the hardware interface and the controllers that publish
-the upstream topics this workspace consumes.
+The UR driver provides the hardware interface and the controllers whose topics
+this workspace consumes.
 
-**Location (on this machine):** `~/ur_drive/ur_drive_ws`
+**Repository:** https://github.com/UniversalRobots/Universal_Robots_ROS2_Driver  
+**Branch for Humble:** `humble`
 
-Relevant packages inside that workspace:
+Clone and build it in a separate workspace before building this one:
+
+```bash
+# Create and enter a workspace directory of your choice
+mkdir -p ~/ur_ros2_ws/src && cd ~/ur_ros2_ws
+
+# Import the driver and its dependencies using vcs
+git clone -b humble \
+  https://github.com/UniversalRobots/Universal_Robots_ROS2_Driver.git \
+  src/Universal_Robots_ROS2_Driver
+
+vcs import src --skip-existing \
+  --input src/Universal_Robots_ROS2_Driver/Universal_Robots_ROS2_Driver.humble.repos
+
+# Install ROS dependencies
+rosdep update
+rosdep install --ignore-src --from-paths src -y
+
+# Build
+colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release
+source install/setup.bash
+```
+
+Packages from the driver used by this workspace:
 
 | Package | Role |
 | --- | --- |
-| `ur_robot_driver` | Hardware interface, launch files (`ur_control.launch.py`) |
+| `ur_robot_driver` | Hardware interface and launch files |
 | `ur_controllers` | `tcp_pose_broadcaster`, `io_and_status_controller`, `speed_scaling_state_broadcaster`, `force_torque_sensor_broadcaster` |
-| `Universal_Robots_ROS2_Description` | URDF / xacro model and meshes (used by the driver launch) |
-| `ur_dashboard_msgs` | `RobotMode.msg`, `SafetyMode.msg` etc. — vendored copy is in `src/ur_dashboard_msgs/` |
-| `ur_msgs` | `IOStates.msg`, `SetIO.srv`, etc. — not yet used; reserved for future IO sync stage |
+| `Universal_Robots_ROS2_Description` | URDF / xacro model used by the driver launch |
+| `ur_dashboard_msgs` | `RobotMode.msg`, `SafetyMode.msg` — also vendored in `src/ur_dashboard_msgs/` |
 
 ### 3. URSim (for simulation)
 
-URSim is the official Universal Robots simulator. It runs inside a Docker
-container and behaves identically to a real UR controller from the driver's
-perspective.
+URSim is the official Universal Robots simulator distributed as a Docker image.
+It behaves identically to a real UR controller from the driver's perspective.
 
-Start URSim for UR7e:
+**Docker Hub:** https://hub.docker.com/r/universalrobots/ursim_e-series
+
+Pull and start URSim for UR7e:
 
 ```bash
-source ~/ur_drive/ur_drive_ws/install/setup.bash
-ros2 run ur_client_library start_ursim.sh -m ur7e
+docker run --rm -it \
+  -e ROBOT_MODEL=UR7E \
+  -p 5900:5900 \
+  -p 6080:6080 \
+  universalrobots/ursim_e-series
 ```
 
-URSim takes ~30 seconds to boot. Once ready, its default IP is
-`10.255.255.254` (Docker bridge address).
+URSim takes ~30 seconds to boot. Once ready, its IP on the Docker bridge
+network is typically `10.255.255.254`. You can open a browser at
+`http://localhost:6080` to view the PolyScope interface.
 
 ### 4. Unity ROS-TCP-Endpoint
+
+**Repository:** https://github.com/Unity-Technologies/ROS-TCP-Endpoint  
+**Branch for ROS 2:** `main-ros2`
 
 Clone into `src/ROS-TCP-Endpoint` (already git-ignored):
 
@@ -149,57 +180,60 @@ git clone -b main-ros2 \
 git clone <repository-url>
 cd digital_twin_on_unity_and_ros2_ws
 
-# 2. Clone the ROS-TCP-Endpoint
+# 2. Clone the ROS-TCP-Endpoint into src/
 git clone -b main-ros2 \
   https://github.com/Unity-Technologies/ROS-TCP-Endpoint.git \
   src/ROS-TCP-Endpoint
 
-# 3. Source the UR driver workspace, then build
-source ~/ur_drive/ur_drive_ws/install/setup.bash
+# 3. Source the UR driver workspace (built separately, see above), then build
+source <path-to-ur-driver-workspace>/install/setup.bash
 colcon build
 source install/setup.bash
 ```
 
-> The UR driver workspace must be sourced **before** `colcon build` so that
-> `ur_dashboard_msgs` and the controller packages are found by the build system.
+> The UR driver workspace must be sourced **before** `colcon build` so the
+> compiler can find the controller and interface packages.
 
 ---
 
 ## Running the System
 
-### Step 1 — Start URSim (simulation) or connect to a real robot
+### Step 1 — Start URSim or power on the real robot
 
 **URSim:**
 
 ```bash
-# Terminal A — start the simulator
-source ~/ur_drive/ur_drive_ws/install/setup.bash
-ros2 run ur_client_library start_ursim.sh -m ur7e
-# wait ~30 s for URSim to finish booting
+# Terminal A
+docker run --rm -it \
+  -e ROBOT_MODEL=UR7E \
+  -p 5900:5900 \
+  -p 6080:6080 \
+  universalrobots/ursim_e-series
+# wait ~30 s for the simulator to finish booting
 ```
 
-**Real UR7e:** power on the robot and ensure it is reachable on the network.
+**Real UR7e:** power on the robot and confirm it is reachable on the network.
 
 ### Step 2 — Launch the UR ROS 2 driver
 
 ```bash
 # Terminal B
-source ~/ur_drive/ur_drive_ws/install/setup.bash
+source <path-to-ur-driver-workspace>/install/setup.bash
 
-# For URSim
+# URSim
 ros2 launch ur_robot_driver ur_control.launch.py \
   ur_type:=ur7e \
   robot_ip:=10.255.255.254 \
   launch_rviz:=false
 
-# For a real UR7e (replace IP with the actual robot IP)
+# Real UR7e (replace with the actual robot IP)
 ros2 launch ur_robot_driver ur_control.launch.py \
   ur_type:=ur7e \
   robot_ip:=<robot-ip> \
   launch_rviz:=false
 ```
 
-When the driver is up, the following topics are available:
+When the driver is running, these topics are available:
 
 ```text
 /joint_states
@@ -214,38 +248,38 @@ When the driver is up, the following topics are available:
 ### Step 3 — Launch the digital twin manager
 
 ```bash
-# Terminal C — source both workspaces (order matters)
-source ~/ur_drive/ur_drive_ws/install/setup.bash
-source ~/digital_twin_on_unity_and_ros2/digital_twin_on_unity_and_ros2_ws/install/setup.bash
+# Terminal C — source the UR driver workspace first, then this workspace
+source <path-to-ur-driver-workspace>/install/setup.bash
+source <path-to-this-workspace>/install/setup.bash
 
-# Unity on the same machine
+# Unity on the same machine as ROS
 ros2 launch digital_twin_on_unity_and_ros2 digital_twin_manager.launch.py \
   ros_ip:=127.0.0.1 \
   ros_tcp_port:=10000
 
-# Unity on a different machine (use the IP of this ROS machine)
+# Unity on a different machine (use the IP of the ROS machine)
 ros2 launch digital_twin_on_unity_and_ros2 digital_twin_manager.launch.py \
-  ros_ip:=<this-machine-ip> \
+  ros_ip:=<ros-machine-ip> \
   ros_tcp_port:=10000
 ```
 
 ### Step 4 — Verify topics
 
 ```bash
-# Source both workspaces in a new terminal, then:
+# In a new terminal, source both workspaces, then run:
 
-# Check upstream UR driver topics
+# Upstream UR driver topics
 ros2 topic echo --once /joint_states
 ros2 topic echo --once /tcp_pose_broadcaster/pose
 ros2 topic echo --once /io_and_status_controller/robot_mode
 
-# Check Unity-facing topics
+# Unity-facing topics
 ros2 topic echo --once /unity/joint_states
 ros2 topic echo --once /unity/tcp_pose
 ros2 topic echo --once /unity/robot_status
 ros2 topic echo --once /unity/wrench
 
-# Check publish rates
+# Publish rates
 ros2 topic hz /unity/joint_states
 ros2 topic hz /unity/tcp_pose
 ros2 topic hz /unity/wrench
@@ -257,8 +291,8 @@ ros2 topic hz /unity/wrench
 
 The Unity project uses the
 [ROS-TCP-Connector](https://github.com/Unity-Technologies/ROS-TCP-Connector)
-package to subscribe to the `/unity/*` topics published by this workspace.
-Reference C# subscriber scripts are in `plan/script/`:
+package to subscribe to the `/unity/*` topics. Reference C# subscriber scripts
+are in `plan/script/`:
 
 | Script | Topic |
 | --- | --- |
@@ -276,8 +310,8 @@ be added as that work progresses.
 ## Rebuilding After Code Changes
 
 ```bash
-cd ~/digital_twin_on_unity_and_ros2/digital_twin_on_unity_and_ros2_ws
-source ~/ur_drive/ur_drive_ws/install/setup.bash
+cd <path-to-this-workspace>
+source <path-to-ur-driver-workspace>/install/setup.bash
 colcon build
 source install/setup.bash
 ```
