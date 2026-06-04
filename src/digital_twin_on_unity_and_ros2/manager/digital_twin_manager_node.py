@@ -27,9 +27,13 @@ class DigitalTwinManager(Node):
         self.declare_parameter("ros_tcp_port", 10000)
         self.declare_parameter("respawn_permanent_nodes", True)
 
-        self.ros_ip = self.get_parameter("ros_ip").get_parameter_value().string_value
+        self.ros_ip = (
+            self.get_parameter("ros_ip").get_parameter_value().string_value
+        )
         self.ros_tcp_port = (
-            self.get_parameter("ros_tcp_port").get_parameter_value().integer_value
+            self.get_parameter("ros_tcp_port")
+            .get_parameter_value()
+            .integer_value
         )
         self.respawn_permanent_nodes = (
             self.get_parameter("respawn_permanent_nodes")
@@ -41,7 +45,10 @@ class DigitalTwinManager(Node):
         self.controlled_nodes: Dict[str, ManagedProcess] = {}
 
         self._shutting_down = False
-        self._monitor_timer = self.create_timer(2.0, self._monitor_permanent_nodes)
+        self._monitor_timer = self.create_timer(
+            2.0,
+            self._monitor_permanent_nodes,
+        )
 
         self.get_logger().info("Starting permanent digital twin nodes.")
         self.start_permanent_nodes()
@@ -55,6 +62,15 @@ class DigitalTwinManager(Node):
                     "run",
                     "digital_twin_on_unity_and_ros2",
                     "joint_state_bridge_ros2unity",
+                ],
+            ),
+            "ur_state_bridge_ros2unity": ManagedProcess(
+                name="ur_state_bridge_ros2unity",
+                command=[
+                    "ros2",
+                    "run",
+                    "digital_twin_on_unity_and_ros2",
+                    "ur_state_bridge_ros2unity",
                 ],
             ),
             "ros_tcp_endpoint": ManagedProcess(
@@ -79,12 +95,15 @@ class DigitalTwinManager(Node):
 
     def _start_process(self, managed_process: ManagedProcess):
         if managed_process.process and managed_process.process.poll() is None:
-            self.get_logger().debug(f"{managed_process.name} is already running.")
+            self.get_logger().debug(
+                f"{managed_process.name} is already running."
+            )
             return
 
         env = os.environ.copy()
         self.get_logger().info(
-            f"Starting {managed_process.name}: {' '.join(managed_process.command)}"
+            f"Starting {managed_process.name}: "
+            f"{' '.join(managed_process.command)}"
         )
         managed_process.process = subprocess.Popen(
             managed_process.command,
