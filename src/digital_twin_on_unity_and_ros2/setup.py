@@ -6,7 +6,7 @@ package_name = 'digital_twin_on_unity_and_ros2'
 
 setup(
     name=package_name,
-    version='0.0.0',
+    version='0.0.1',
     packages=find_packages(exclude=['test']),
     data_files=[
         ('share/ament_index/resource_index/packages',
@@ -16,9 +16,11 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='marcelluo',
-    maintainer_email='marcelluo@todo.todo',
-    description='TODO: Package description',
+    maintainer='HAOYU LUO',
+    maintainer_email='haoyu.luo@ensam.eu',
+    description='ROS 2 nodes bridging UR robot state to Unity for a digital '
+                'twin (joint state and UR state bridges plus a supervisor '
+                'manager).',
     license='Apache-2.0',
     extras_require={
         'test': [

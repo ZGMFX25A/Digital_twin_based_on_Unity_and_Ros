@@ -3,8 +3,8 @@
 <package format="3">
   <name>digital_twin_interfaces</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
-  <maintainer email="marcelluo@todo.todo">marcelluo</maintainer>
+  <description>Custom ROS 2 message definitions for the Unity digital twin (joint state, TCP pose, robot status, wrench).</description>
+  <maintainer email="haoyu.luo@ensam.eu">HAOYU LUO</maintainer>
   <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
