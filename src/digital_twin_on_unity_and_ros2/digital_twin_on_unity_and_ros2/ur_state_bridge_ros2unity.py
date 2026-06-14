@@ -74,47 +74,59 @@ class URStateBridgeROS2Unity(Node):
             "robot_status_output_topic"
         ).value
         wrench_output_topic = self.get_parameter("wrench_output_topic").value
-        state_qos = QoSProfile(
+
+        # Latched publishers (robot_mode / safety_mode / robot_program_running)
+        # are RELIABLE + TRANSIENT_LOCAL, so we must match that to receive the
+        # last latched sample. See gpio_controller.cpp:289-302 in the UR driver.
+        latched_qos = QoSProfile(
             depth=1,
             reliability=ReliabilityPolicy.RELIABLE,
             durability=DurabilityPolicy.TRANSIENT_LOCAL,
+        )
+        # tcp_pose / wrench / speed_scaling broadcasters are RELIABLE + VOLATILE.
+        # Subscribing with TRANSIENT_LOCAL makes QoS incompatible and the data
+        # never arrives, so these three must use VOLATILE to match.
+        streaming_qos = QoSProfile(
+            depth=10,
+            reliability=ReliabilityPolicy.RELIABLE,
+            durability=DurabilityPolicy.VOLATILE,
         )
 
         self.create_subscription(
             PoseStamped,
             tcp_pose_topic,
             self.tcp_pose_callback,
-            state_qos,
+            streaming_qos,
         )
         self.create_subscription(
             RobotMode,
             robot_mode_topic,
             self.robot_mode_callback,
-            state_qos,
+            latched_qos,
         )
         self.create_subscription(
             SafetyMode,
             safety_mode_topic,
             self.safety_mode_callback,
-            state_qos,
+            latched_qos,
         )
         self.create_subscription(
             Bool,
             robot_program_running_topic,
             self.robot_program_running_callback,
-            state_qos,
+            latched_qos,
         )
         self.create_subscription(
             Float64,
             speed_scaling_topic,
             self.speed_scaling_callback,
-            state_qos,
+            streaming_qos,
         )
         self.create_subscription(
             WrenchStamped,
             wrench_topic,
             self.wrench_callback,
-            state_qos,
+            streaming_qos,
         )
 
         self.tcp_pose_pub = self.create_publisher(

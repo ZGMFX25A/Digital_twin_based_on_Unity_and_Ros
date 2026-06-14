@@ -28,10 +28,15 @@ URSim (Docker) / Real UR7e
 
   └─► This workspace (digital_twin_on_unity_and_ros2_ws)
         ├─ joint_state_bridge_ros2unity     → /unity/joint_states   (on-change)
+        ├─ joint_torque_bridge_ros2unity    → /unity/joint_torques  (follows input)
         ├─ ur_state_bridge_ros2unity        → /unity/tcp_pose        (30 Hz)
         │                                     /unity/robot_status    (10 Hz)
         │                                     /unity/wrench          (30 Hz)
         └─ ros_tcp_endpoint                 → TCP port 10000
+
+  └─► Optional, pluggable (not started by the manager)
+        ur_rtde_torque_bridge (RTDE receive-only) → /joint_torques (N·m)
+              ↑ feeds joint_torque_bridge_ros2unity above
 
   └─► Unity (ROS-TCP-Connector)
         subscribes to /unity/* topics
@@ -48,6 +53,7 @@ not depend on any hardcoded path from the UR driver workspace.
 src/
   digital_twin_interfaces/        Custom ROS 2 message definitions
   digital_twin_on_unity_and_ros2/ Bridge nodes, manager node, and launch files
+  ur_rtde_torque_bridge/          Optional, pluggable RTDE torque source (N·m)
   ur_dashboard_msgs/              UR dashboard messages (vendored from UR driver)
   ROS-TCP-Endpoint/               Unity ROS-TCP-Endpoint (local clone, git-ignored)
 ```
@@ -59,12 +65,19 @@ src/
 | Topic | Message type | Upstream source | Rate |
 | --- | --- | --- | --- |
 | `/unity/joint_states` | `JointStateUnity` | `/joint_states` | on-change |
+| `/unity/joint_torques` | `JointTorqueUnity` | `/joint_torques` (from `ur_rtde_torque_bridge`) | follows input |
 | `/unity/tcp_pose` | `TcpPoseUnity` | `/tcp_pose_broadcaster/pose` | 30 Hz |
 | `/unity/robot_status` | `RobotStatusUnity` | robot/safety/program/speed topics | 10 Hz |
 | `/unity/wrench` | `WrenchUnity` | `/force_torque_sensor_broadcaster/wrench` | 30 Hz |
 
 **`JointStateUnity`** — joint positions and velocities converted from rad / rad·s⁻¹
-to degrees / degrees·s⁻¹, reordered to a fixed UR7e joint sequence.
+to degrees / degrees·s⁻¹, reordered to a fixed UR7e joint sequence. The `efforts`
+field carries the UR driver's `actual_current` (motor **current in A**, *not*
+torque); real joint torque is published separately on `/unity/joint_torques`.
+
+**`JointTorqueUnity`** — real joint torques (N·m) in the fixed UR7e joint order,
+sourced from the optional `ur_rtde_torque_bridge` (RTDE `actual_current_as_torque`
+or `target_moment`). Only published while that package is running.
 
 **`RobotStatusUnity`** — aggregates `robot_mode` (int8 + label), `safety_mode`
 (uint8 + label), `robot_program_running` (bool), `robot_program_running_received`
@@ -80,14 +93,35 @@ frame is handled on the Unity side.
 
 ## Nodes Managed at Runtime
 
-The `digital_twin_manager` node supervises three permanent child processes and
+The `digital_twin_manager` node supervises four permanent child processes and
 automatically respawns them if they exit:
 
 | Process | What it does |
 | --- | --- |
 | `joint_state_bridge_ros2unity` | `/joint_states` → `/unity/joint_states` |
+| `joint_torque_bridge_ros2unity` | `/joint_torques` → `/unity/joint_torques` (idle until a torque source publishes) |
 | `ur_state_bridge_ros2unity` | UR state topics → `/unity/tcp_pose`, `/unity/robot_status`, `/unity/wrench` |
 | `ros_tcp_endpoint default_server_endpoint` | bridges the `/unity/*` topics to Unity over TCP |
+
+### Optional joint torque source
+
+The `ur_rtde_torque_bridge` package is **pluggable** and **not** started by the
+manager. It opens an independent RTDE receive-only connection (raw RTDE wire
+protocol, Python standard library only — **no external dependency**) to publish
+real joint torques (N·m) on `/joint_torques`, which `joint_torque_bridge_ros2unity`
+then forwards to Unity. Start it on demand:
+
+```bash
+ros2 launch ur_rtde_torque_bridge torque_publisher.launch.py \
+  robot_ip:=<ROBOT_IP>
+```
+
+The default `rtde_field` is `actual_current_as_torque` (measured torque,
+PolyScope ≥ 5.23/10.11). If the firmware lacks it, the node logs `NOT_FOUND`;
+pass `rtde_field:=target_moment` (commanded torque, all versions) instead.
+
+Any other source can replace it by publishing the same `/joint_torques`
+(`sensor_msgs/JointState`, effort = N·m) — see `src/ur_rtde_torque_bridge/README.md`.
 
 ---
 
@@ -278,6 +312,8 @@ ros2 topic echo --once /unity/joint_states
 ros2 topic echo --once /unity/tcp_pose
 ros2 topic echo --once /unity/robot_status
 ros2 topic echo --once /unity/wrench
+# Only with the optional ur_rtde_torque_bridge running:
+ros2 topic echo --once /unity/joint_torques
 
 # Publish rates
 ros2 topic hz /unity/joint_states
@@ -292,14 +328,16 @@ ros2 topic hz /unity/wrench
 The Unity project uses the
 [ROS-TCP-Connector](https://github.com/Unity-Technologies/ROS-TCP-Connector)
 package to subscribe to the `/unity/*` topics. Reference C# subscriber scripts
-are in `plan/script/`:
+are in `plan/shared/script/`:
 
 | Script | Topic |
 | --- | --- |
 | `UR7eJointStateSubscriber.cs` | `/unity/joint_states` |
 | `UR7eTcpMarkerSubscriber.cs` | `/unity/tcp_pose` |
 | `UR7eRobotStatusSubscriber.cs` | `/unity/robot_status` |
-| `UR7eWrenchSubscriber.cs` | `/unity/wrench` |
+| `UR7eWrenchSubscriber.cs` | `/unity/wrench` (force/torque numbers + \|F\|) |
+| `UR7eJointTorquePanel.cs` | `/unity/joint_torques` (N·m + % of rated torque) |
+| `UR7eTcpForceArrow.cs` | `/unity/wrench` (3D force arrow at the TCP) |
 
 Generated message types are under the `RosMessageTypes.DigitalTwinInterfaces`
 namespace. Full Unity scene setup, UI panel design, and integration guide will

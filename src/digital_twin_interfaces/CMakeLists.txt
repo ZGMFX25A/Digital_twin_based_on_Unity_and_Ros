@@ -12,6 +12,7 @@ find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/JointStateUnity.msg"
+  "msg/JointTorqueUnity.msg"
   "msg/TcpPoseUnity.msg"
   "msg/RobotStatusUnity.msg"
   "msg/WrenchUnity.msg"

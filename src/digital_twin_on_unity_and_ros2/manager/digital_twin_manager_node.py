@@ -64,6 +64,15 @@ class DigitalTwinManager(Node):
                     "joint_state_bridge_ros2unity",
                 ],
             ),
+            "joint_torque_bridge_ros2unity": ManagedProcess(
+                name="joint_torque_bridge_ros2unity",
+                command=[
+                    "ros2",
+                    "run",
+                    "digital_twin_on_unity_and_ros2",
+                    "joint_torque_bridge_ros2unity",
+                ],
+            ),
             "ur_state_bridge_ros2unity": ManagedProcess(
                 name="ur_state_bridge_ros2unity",
                 command=[

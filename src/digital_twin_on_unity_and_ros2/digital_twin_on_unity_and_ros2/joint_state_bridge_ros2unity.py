@@ -47,6 +47,7 @@ class JointStateBridgeROS2Unity(Node):
     def joint_state_callback(self, msg: JointState):
         position_map = {}
         velocity_map = {}
+        effort_map = {}
 
         for i, joint_name in enumerate(msg.name):
             if i < len(msg.position):
@@ -55,10 +56,15 @@ class JointStateBridgeROS2Unity(Node):
             if i < len(msg.velocity):
                 velocity_map[joint_name] = msg.velocity[i]
 
+            # effort is UR `actual_current` (amperes), passed through as-is.
+            if i < len(msg.effort):
+                effort_map[joint_name] = msg.effort[i]
+
         output_msg = JointStateUnity()
         output_msg.names = []
         output_msg.positions = []
         output_msg.velocities = []
+        output_msg.efforts = []
 
         for joint_name in self.joint_order:
             if joint_name not in position_map:
@@ -74,9 +80,13 @@ class JointStateBridgeROS2Unity(Node):
             velocity_rad = velocity_map.get(joint_name, 0.0)
             velocity_deg = math.degrees(velocity_rad)
 
+            # Missing effort defaults to 0.0 (current in amperes, not torque).
+            effort = effort_map.get(joint_name, 0.0)
+
             output_msg.names.append(joint_name)
             output_msg.positions.append(position_deg)
             output_msg.velocities.append(velocity_deg)
+            output_msg.efforts.append(effort)
 
         self.pub.publish(output_msg)
 

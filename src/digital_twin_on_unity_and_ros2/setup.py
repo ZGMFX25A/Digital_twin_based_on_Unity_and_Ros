@@ -35,6 +35,11 @@ setup(
                 'joint_state_bridge_ros2unity:main'
             ),
             (
+                'joint_torque_bridge_ros2unity = '
+                'digital_twin_on_unity_and_ros2.'
+                'joint_torque_bridge_ros2unity:main'
+            ),
+            (
                 'ur_state_bridge_ros2unity = '
                 'digital_twin_on_unity_and_ros2.'
                 'ur_state_bridge_ros2unity:main'

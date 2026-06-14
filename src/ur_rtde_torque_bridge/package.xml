@@ -1,20 +1,17 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>digital_twin_on_unity_and_ros2</name>
+  <name>ur_rtde_torque_bridge</name>
   <version>0.0.1</version>
-  <description>ROS 2 nodes bridging UR robot state to Unity for a digital twin (joint state and UR state bridges plus a supervisor manager).</description>
+  <description>Standalone, pluggable RTDE receive-only client that publishes UR joint torques (N.m) on the intermediate /joint_torques topic as a standard sensor_msgs/JointState. Depends only on rclpy and sensor_msgs; can be launched on its own or removed entirely without affecting the digital twin.</description>
   <maintainer email="haoyu.luo@ensam.eu">HAOYU LUO</maintainer>
   <license>Apache-2.0</license>
 
   <depend>rclpy</depend>
-  <depend>launch</depend>
-  <depend>launch_ros</depend>
-  <depend>digital_twin_interfaces</depend>
-  <depend>geometry_msgs</depend>
   <depend>sensor_msgs</depend>
-  <depend>std_msgs</depend>
-  <depend>ur_dashboard_msgs</depend>
+
+  <!-- The RTDE client is implemented with the Python standard library only
+       (socket, struct), so there is no external pip dependency. -->
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
