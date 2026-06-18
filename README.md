@@ -371,25 +371,21 @@ ros2 topic echo --once /unity/joint_torques   # only with ur_rtde_torque_bridge
 
 ## Connecting Unity (networking)
 
-`ros_ip` is the address the ROS-TCP endpoint **binds/listens on** — it is **not**
-the address Unity dials. Keep it **empty or `0.0.0.0`** (the default) so the
-endpoint accepts connections on all interfaces:
+`ros_ip` is the address the ROS-TCP endpoint binds/listens on — it is **not** the
+address Unity dials. Keep it **empty or `0.0.0.0`** (the default) so the endpoint
+accepts connections on all interfaces. Do **not** set `127.0.0.1`: that binds
+localhost only, and Unity on a different host (the usual WSL2 to Windows case)
+cannot reach it.
 
-| `ros_ip` value | Result |
-| --- | --- |
-| `0.0.0.0` (default) or empty | Binds all interfaces — Unity can connect. ✅ |
-| `127.0.0.1` | Binds localhost only — Unity on the Windows host (WSL2) or any other machine **cannot** connect. ❌ |
+In Unity (*Robotics -> ROS Settings -> ROS IP Address*, port `10000`), the only
+case that needs attention is when **Unity runs on a different machine than ROS**
+— which is the normal setup here (ROS in WSL, Unity on Windows). Then enter the
+**reachable IP of the ROS machine**: get it with `hostname -I` in WSL (e.g.
+`172.x.x.x`), and note it **changes on every WSL restart**. Alternatively, enable
+WSL2 mirrored networking and use `127.0.0.1`.
 
-In Unity (*Robotics → ROS Settings → ROS IP Address*) enter the **reachable IP of
-the ROS machine**, with port `10000`:
-
-| Setup | Unity ROS IP Address |
-| --- | --- |
-| ROS in WSL2, Unity on Windows | WSL IP from `hostname -I` (e.g. `172.x.x.x`) — **changes on every WSL restart**; or enable WSL2 mirrored networking and use `127.0.0.1` |
-| Same machine / LAN | The ROS machine's own IP |
-
-If it still fails after the IP is correct, check the Windows firewall:
-`Test-NetConnection <wsl-ip> -Port 10000` should report `TcpTestSucceeded : True`.
+If the connection still fails after the IP is correct, check the Windows firewall:
+`Test-NetConnection <ros-ip> -Port 10000` should report `TcpTestSucceeded : True`.
 
 ---
 
