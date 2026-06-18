@@ -31,42 +31,42 @@ setup(
         'console_scripts': [
             (
                 'joint_state_bridge_ros2unity = '
-                'digital_twin_on_unity_and_ros2.'
+                'digital_twin_on_unity_and_ros2.state_bridges.'
                 'joint_state_bridge_ros2unity:main'
             ),
             (
                 'joint_torque_bridge_ros2unity = '
-                'digital_twin_on_unity_and_ros2.'
+                'digital_twin_on_unity_and_ros2.state_bridges.'
                 'joint_torque_bridge_ros2unity:main'
             ),
             (
                 'ur_state_bridge_ros2unity = '
-                'digital_twin_on_unity_and_ros2.'
+                'digital_twin_on_unity_and_ros2.state_bridges.'
                 'ur_state_bridge_ros2unity:main'
             ),
             (
                 'io_states_bridge_ros2unity = '
-                'digital_twin_on_unity_and_ros2.'
+                'digital_twin_on_unity_and_ros2.state_bridges.'
                 'io_states_bridge_ros2unity:main'
             ),
             (
                 'tool_data_bridge_ros2unity = '
-                'digital_twin_on_unity_and_ros2.'
+                'digital_twin_on_unity_and_ros2.state_bridges.'
                 'tool_data_bridge_ros2unity:main'
             ),
             (
                 'controller_status_bridge_ros2unity = '
-                'digital_twin_on_unity_and_ros2.'
+                'digital_twin_on_unity_and_ros2.state_bridges.'
                 'controller_status_bridge_ros2unity:main'
             ),
             (
                 'robot_info_bridge_ros2unity = '
-                'digital_twin_on_unity_and_ros2.'
+                'digital_twin_on_unity_and_ros2.state_bridges.'
                 'robot_info_bridge_ros2unity:main'
             ),
             (
                 'command_supervisor_ros2unity = '
-                'digital_twin_on_unity_and_ros2.'
+                'digital_twin_on_unity_and_ros2.command_bridges.'
                 'command_supervisor_ros2unity:main'
             ),
             'digital_twin_manager = manager.digital_twin_manager_node:main',
