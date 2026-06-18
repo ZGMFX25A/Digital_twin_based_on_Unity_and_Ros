@@ -56,6 +56,7 @@ class URStateBridgeROS2Unity(Node):
         self.safety_mode = 0
         self.robot_program_running = False
         self.robot_program_running_received = False
+        self._program_unknown_logged = False
         self.speed_scaling = 0.0
 
         tcp_pose_topic = self.get_parameter("tcp_pose_topic").value
@@ -248,12 +249,17 @@ class URStateBridgeROS2Unity(Node):
         )
         output_msg.speed_scaling = self.speed_scaling
 
-        if not self.robot_program_running_received:
-            self.get_logger().warn(
-                "No robot_program_running message received yet; "
-                "publishing default false.",
-                throttle_duration_sec=5.0,
+        # robot_program_running is a latched topic the driver only publishes
+        # when a program state is known. With no program loaded it may never
+        # arrive, which is normal (Unity sees received=false). Log once, not on
+        # every cycle, so this does not spam the console.
+        if not self.robot_program_running_received and \
+                not self._program_unknown_logged:
+            self.get_logger().info(
+                "robot_program_running not received yet (no program loaded); "
+                "reporting received=false until it arrives."
             )
+            self._program_unknown_logged = True
 
         self.robot_status_pub.publish(output_msg)
 
