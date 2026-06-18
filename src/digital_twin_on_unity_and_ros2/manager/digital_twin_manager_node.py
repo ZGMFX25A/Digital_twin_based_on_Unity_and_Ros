@@ -82,6 +82,51 @@ class DigitalTwinManager(Node):
                     "ur_state_bridge_ros2unity",
                 ],
             ),
+            "io_states_bridge_ros2unity": ManagedProcess(
+                name="io_states_bridge_ros2unity",
+                command=[
+                    "ros2",
+                    "run",
+                    "digital_twin_on_unity_and_ros2",
+                    "io_states_bridge_ros2unity",
+                ],
+            ),
+            "tool_data_bridge_ros2unity": ManagedProcess(
+                name="tool_data_bridge_ros2unity",
+                command=[
+                    "ros2",
+                    "run",
+                    "digital_twin_on_unity_and_ros2",
+                    "tool_data_bridge_ros2unity",
+                ],
+            ),
+            "controller_status_bridge_ros2unity": ManagedProcess(
+                name="controller_status_bridge_ros2unity",
+                command=[
+                    "ros2",
+                    "run",
+                    "digital_twin_on_unity_and_ros2",
+                    "controller_status_bridge_ros2unity",
+                ],
+            ),
+            "robot_info_bridge_ros2unity": ManagedProcess(
+                name="robot_info_bridge_ros2unity",
+                command=[
+                    "ros2",
+                    "run",
+                    "digital_twin_on_unity_and_ros2",
+                    "robot_info_bridge_ros2unity",
+                ],
+            ),
+            "command_supervisor_ros2unity": ManagedProcess(
+                name="command_supervisor_ros2unity",
+                command=[
+                    "ros2",
+                    "run",
+                    "digital_twin_on_unity_and_ros2",
+                    "command_supervisor_ros2unity",
+                ],
+            ),
             "ros_tcp_endpoint": ManagedProcess(
                 name="ros_tcp_endpoint",
                 command=[

@@ -198,6 +198,11 @@ class URStateBridgeROS2Unity(Node):
         self.robot_program_running_received = True
 
     def speed_scaling_callback(self, msg):
+        # Passed through as-is (no conversion). Note the driver's
+        # speed_scaling_state_broadcaster already multiplies the underlying 0-1
+        # factor by 100, so this value is 0-100 (a percentage number, full
+        # speed = 100.0). Unity should display it directly with a "%" sign and
+        # must NOT multiply by 100 again.
         self.speed_scaling = msg.data
 
     def wrench_callback(self, msg):

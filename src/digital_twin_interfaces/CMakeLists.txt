@@ -16,6 +16,12 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/TcpPoseUnity.msg"
   "msg/RobotStatusUnity.msg"
   "msg/WrenchUnity.msg"
+  "msg/IoStatesUnity.msg"
+  "msg/ToolDataUnity.msg"
+  "msg/ControllerStatusUnity.msg"
+  "msg/RobotInfoUnity.msg"
+  "msg/CmdObservedUnity.msg"
+  "msg/CmdStatusUnity.msg"
   DEPENDENCIES builtin_interfaces
   )
 

@@ -27,16 +27,25 @@ URSim (Docker) / Real UR7e
         └─ force_torque_sensor_broadcaster  → /force_torque_sensor_broadcaster/wrench
 
   └─► This workspace (digital_twin_on_unity_and_ros2_ws)
-        ├─ joint_state_bridge_ros2unity     → /unity/joint_states   (on-change)
-        ├─ joint_torque_bridge_ros2unity    → /unity/joint_torques  (follows input)
-        ├─ ur_state_bridge_ros2unity        → /unity/tcp_pose        (30 Hz)
-        │                                     /unity/robot_status    (10 Hz)
-        │                                     /unity/wrench          (30 Hz)
-        └─ ros_tcp_endpoint                 → TCP port 10000
+        ├─ joint_state_bridge_ros2unity       → /unity/joint_states   (on-change)
+        ├─ joint_torque_bridge_ros2unity      → /unity/joint_torques  (follows input)
+        ├─ ur_state_bridge_ros2unity          → /unity/tcp_pose        (30 Hz)
+        │                                       /unity/robot_status    (10 Hz)
+        │                                       /unity/wrench          (30 Hz)
+        ├─ io_states_bridge_ros2unity         → /unity/io_states
+        ├─ tool_data_bridge_ros2unity         → /unity/tool_data
+        ├─ controller_status_bridge_ros2unity → /unity/controller_status
+        ├─ robot_info_bridge_ros2unity        → /unity/robot_info      (~1 Hz)
+        ├─ command_supervisor_ros2unity       → /unity/cmd_observed/*  (read-only)
+        └─ ros_tcp_endpoint                   → TCP port 10000
 
   └─► Optional, pluggable (not started by the manager)
         ur_rtde_torque_bridge (RTDE receive-only) → /joint_torques (N·m)
               ↑ feeds joint_torque_bridge_ros2unity above
+
+  └─► A separate workspace (not edited here): teleoperation_general_ros2
+        publishes /teleop/command, /teleop/validated/*, /teleop/status
+              ↑ command_supervisor_ros2unity OBSERVES these (read-only)
 
   └─► Unity (ROS-TCP-Connector)
         subscribes to /unity/* topics
@@ -54,8 +63,11 @@ src/
   digital_twin_interfaces/        Custom ROS 2 message definitions
   digital_twin_on_unity_and_ros2/ Bridge nodes, manager node, and launch files
   ur_rtde_torque_bridge/          Optional, pluggable RTDE torque source (N·m)
-  ur_dashboard_msgs/              UR dashboard messages (vendored from UR driver)
-  ROS-TCP-Endpoint/               Unity ROS-TCP-Endpoint (local clone, git-ignored)
+  third_party/                    Vendored third-party deps (see third_party/README.md)
+    ur_dashboard_msgs/              UR dashboard messages (vendored from UR driver)
+    ur_msgs/                        UR messages: IOStates / ToolDataMsg (vendored)
+    teleop_msgs/                    Teleop command/status messages (vendored, for observation)
+    ROS-TCP-Endpoint/               Unity ROS-TCP-Endpoint (local clone, git-ignored)
 ```
 
 ---
@@ -69,6 +81,11 @@ src/
 | `/unity/tcp_pose` | `TcpPoseUnity` | `/tcp_pose_broadcaster/pose` | 30 Hz |
 | `/unity/robot_status` | `RobotStatusUnity` | robot/safety/program/speed topics | 10 Hz |
 | `/unity/wrench` | `WrenchUnity` | `/force_torque_sensor_broadcaster/wrench` | 30 Hz |
+| `/unity/io_states` | `IoStatesUnity` | `/io_and_status_controller/io_states` | follows input |
+| `/unity/tool_data` | `ToolDataUnity` | `/io_and_status_controller/tool_data` | follows input |
+| `/unity/controller_status` | `ControllerStatusUnity` | `/controller_manager/list_controllers` | 2 Hz |
+| `/unity/robot_info` | `RobotInfoUnity` | UR read-only dashboard/version services | ~1 Hz |
+| `/unity/cmd_observed/*` | `CmdObservedUnity` / `CmdStatusUnity` (+ std types) | `teleoperation_general_ros2` topics (**observed, read-only**) | follows input |
 
 **`JointStateUnity`** — joint positions and velocities converted from rad / rad·s⁻¹
 to degrees / degrees·s⁻¹, reordered to a fixed UR7e joint sequence. The `efforts`
@@ -93,14 +110,19 @@ frame is handled on the Unity side.
 
 ## Nodes Managed at Runtime
 
-The `digital_twin_manager` node supervises four permanent child processes and
-automatically respawns them if they exit:
+The `digital_twin_manager` node supervises the permanent child processes below
+and automatically respawns them if they exit:
 
 | Process | What it does |
 | --- | --- |
 | `joint_state_bridge_ros2unity` | `/joint_states` → `/unity/joint_states` |
 | `joint_torque_bridge_ros2unity` | `/joint_torques` → `/unity/joint_torques` (idle until a torque source publishes) |
 | `ur_state_bridge_ros2unity` | UR state topics → `/unity/tcp_pose`, `/unity/robot_status`, `/unity/wrench` |
+| `io_states_bridge_ros2unity` | `/io_and_status_controller/io_states` → `/unity/io_states` |
+| `tool_data_bridge_ros2unity` | `/io_and_status_controller/tool_data` → `/unity/tool_data` |
+| `controller_status_bridge_ros2unity` | polls `/controller_manager/list_controllers` → `/unity/controller_status` |
+| `robot_info_bridge_ros2unity` | polls UR read-only services → `/unity/robot_info` |
+| `command_supervisor_ros2unity` | observes `teleoperation_general_ros2` command topics → `/unity/cmd_observed/*` (read-only) |
 | `ros_tcp_endpoint default_server_endpoint` | bridges the `/unity/*` topics to Unity over TCP |
 
 ### Optional joint torque source

@@ -1,4 +1,4 @@
-src/ROS-TCP-Endpoint/
+src/third_party/ROS-TCP-Endpoint/
 
 build/
 install/
