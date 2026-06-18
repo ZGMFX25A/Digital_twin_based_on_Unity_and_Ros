@@ -308,16 +308,30 @@ When the driver is running, these topics are available:
 source <path-to-ur-driver-workspace>/install/setup.bash
 source <path-to-this-workspace>/install/setup.bash
 
-# Unity on the same machine as ROS
+# Recommended: leave ros_ip at its default (0.0.0.0). The default already binds
+# the endpoint on all interfaces, which is what Unity needs in every setup.
 ros2 launch digital_twin_on_unity_and_ros2 digital_twin_manager.launch.py \
-  ros_ip:=127.0.0.1 \
-  ros_tcp_port:=10000
-
-# Unity on a different machine (use the IP of the ROS machine)
-ros2 launch digital_twin_on_unity_and_ros2 digital_twin_manager.launch.py \
-  ros_ip:=<ros-machine-ip> \
   ros_tcp_port:=10000
 ```
+
+**`ros_ip` is the endpoint *bind* address — keep it empty or `0.0.0.0`.**
+
+`ros_ip` sets the address the ROS-TCP endpoint *listens on*; it is **not** the
+address Unity dials. Leave it **empty or `0.0.0.0`** so the endpoint accepts
+connections on all interfaces (the endpoint treats an empty value and `0.0.0.0`
+the same — bind all):
+
+- ✅ `0.0.0.0` (default) or empty — binds all interfaces; Unity can connect.
+- ❌ `127.0.0.1` — binds localhost only; Unity on the **Windows host (WSL2)** or
+  any other machine **cannot** connect. (This is the usual "Unity can't connect".)
+
+In Unity (Robotics → ROS Settings → *ROS IP Address*) enter the **reachable IP of
+the ROS machine**, not the bind address:
+
+- WSL2 (ROS in WSL, Unity on Windows): the WSL IP from `hostname -I`
+  (e.g. `172.x.x.x`) — **it changes on each WSL restart**; or enable WSL2
+  mirrored networking and use `127.0.0.1`.
+- Same machine / LAN: the ROS machine's own IP.
 
 ### Step 4 — Verify topics
 
