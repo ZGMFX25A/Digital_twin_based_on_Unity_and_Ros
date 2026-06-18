@@ -67,7 +67,7 @@ src/
     ur_dashboard_msgs/              UR dashboard messages (vendored from UR driver)
     ur_msgs/                        UR messages: IOStates / ToolDataMsg (vendored)
     teleop_msgs/                    Teleop command/status messages (vendored, for observation)
-    ROS-TCP-Endpoint/               Unity ROS-TCP-Endpoint (local clone, git-ignored)
+  ROS-TCP-Endpoint/               Unity ROS-TCP-Endpoint (local clone, git-ignored)
 ```
 
 ---

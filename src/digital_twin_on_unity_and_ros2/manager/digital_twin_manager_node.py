@@ -23,7 +23,10 @@ class DigitalTwinManager(Node):
     def __init__(self):
         super().__init__("digital_twin_manager")
 
-        self.declare_parameter("ros_ip", "127.0.0.1")
+        # Bind all interfaces so Unity on the Windows host (WSL2 has a separate
+        # NAT IP) can reach the endpoint. 127.0.0.1 would only accept local
+        # connections. The launch file passes 0.0.0.0 too.
+        self.declare_parameter("ros_ip", "0.0.0.0")
         self.declare_parameter("ros_tcp_port", 10000)
         self.declare_parameter("respawn_permanent_nodes", True)
 
