@@ -84,7 +84,7 @@ ever sent back.
 ```mermaid
 flowchart LR
     teleop["teleoperation_general_ros2<br/>separate repo"] -->|"/teleop/command,<br/>/teleop/validated/*,<br/>/teleop/status"| cb["command_bridges/<br/>observe · read-only"]
-    cb -->|"/unity/cmd_observed/*"| ep["ros_tcp_endpoint<br/>:10000"]
+    cb -->|"/unity/cmd_observed/*<br/>/unity/cmd_display/*"| ep["ros_tcp_endpoint<br/>:10000"]
     ep --> unity["Unity"]
 ```
 
@@ -95,6 +95,14 @@ flowchart LR
 | `/unity/cmd_observed/{joint_velocity,joint_position}` | `sensor_msgs/JointState` | `/teleop/validated/*` | follows input |
 | `/unity/cmd_observed/cartesian_pose` | `geometry_msgs/PoseStamped` | `/teleop/validated/cartesian_pose` | follows input |
 | `/unity/cmd_observed/twist` | `geometry_msgs/TwistStamped` | `/servo_node/delta_twist_cmds` | follows input |
+| `/unity/cmd_display/twist` | `geometry_msgs/TwistStamped` | display-conditioned Servo input | 30 Hz while active |
+
+`twist_display_conditioner_ros2unity` keeps the first nonzero sample for up to
+`initial_hold_s=0.65` while terminal key repeat starts, then uses
+`active_timeout_s=0.25` once repeated samples are detected. IDLE, disabled,
+emergency-stop, and unsafe status clear the display immediately. These defaults
+are ROS parameters. The node only changes the Unity display stream; it does not
+make the Servo control input continuous.
 
 ---
 
@@ -143,6 +151,7 @@ exit. The manager launches them via `ros2 run`; executable names are stable.
 | `controller_status_bridge_ros2unity` | polls `/controller_manager/list_controllers` → `/unity/controller_status` |
 | `robot_info_bridge_ros2unity` | polls UR read-only services → `/unity/robot_info` |
 | `command_supervisor_ros2unity` | observes `teleoperation_general_ros2` → `/unity/cmd_observed/*` (read-only) |
+| `twist_display_conditioner_ros2unity` | stabilises observed Twist for Unity → `/unity/cmd_display/twist` (read-only) |
 | `ros_tcp_endpoint default_server_endpoint` | bridges `/unity/*` to Unity over TCP |
 
 `ur_rtde_torque_bridge` is **pluggable** and **not** started by the manager. It

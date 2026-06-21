@@ -130,6 +130,15 @@ class DigitalTwinManager(Node):
                     "command_supervisor_ros2unity",
                 ],
             ),
+            "twist_display_conditioner_ros2unity": ManagedProcess(
+                name="twist_display_conditioner_ros2unity",
+                command=[
+                    "ros2",
+                    "run",
+                    "digital_twin_on_unity_and_ros2",
+                    "twist_display_conditioner_ros2unity",
+                ],
+            ),
             "ros_tcp_endpoint": ManagedProcess(
                 name="ros_tcp_endpoint",
                 command=[

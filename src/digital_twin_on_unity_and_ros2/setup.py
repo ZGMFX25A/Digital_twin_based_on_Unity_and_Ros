@@ -69,6 +69,11 @@ setup(
                 'digital_twin_on_unity_and_ros2.command_bridges.'
                 'command_supervisor_ros2unity:main'
             ),
+            (
+                'twist_display_conditioner_ros2unity = '
+                'digital_twin_on_unity_and_ros2.command_bridges.'
+                'twist_display_conditioner_ros2unity:main'
+            ),
             'digital_twin_manager = manager.digital_twin_manager_node:main',
         ],
     },
