@@ -19,6 +19,10 @@
   <depend>controller_manager_msgs</depend>
   <depend>teleop_msgs</depend>
 
+  <!-- Runtime-only: the manager spawns ur_rtde_torque_bridge's
+       torque_publisher executable as a permanent node. -->
+  <exec_depend>ur_rtde_torque_bridge</exec_depend>
+
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
   <test_depend>ament_pep257</test_depend>

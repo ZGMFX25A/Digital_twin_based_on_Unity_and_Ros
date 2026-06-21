@@ -30,6 +30,14 @@ class DigitalTwinManager(Node):
         self.declare_parameter("ros_tcp_port", 10000)
         self.declare_parameter("respawn_permanent_nodes", True)
 
+        # RTDE target the torque publisher connects OUT to. This is a different
+        # IP from ros_ip (the endpoint bind interface Unity connects IN to).
+        self.declare_parameter("robot_ip", "127.0.0.1")
+        self.declare_parameter("rtde_port", 30004)
+        self.declare_parameter("rtde_field", "actual_current_as_torque")
+        self.declare_parameter("joint_torque_publish_rate_hz", 20.0)
+        self.declare_parameter("joint_torques_topic", "/joint_torques")
+
         self.ros_ip = (
             self.get_parameter("ros_ip").get_parameter_value().string_value
         )
@@ -42,6 +50,29 @@ class DigitalTwinManager(Node):
             self.get_parameter("respawn_permanent_nodes")
             .get_parameter_value()
             .bool_value
+        )
+        self.robot_ip = (
+            self.get_parameter("robot_ip").get_parameter_value().string_value
+        )
+        self.rtde_port = (
+            self.get_parameter("rtde_port")
+            .get_parameter_value()
+            .integer_value
+        )
+        self.rtde_field = (
+            self.get_parameter("rtde_field")
+            .get_parameter_value()
+            .string_value
+        )
+        self.joint_torque_publish_rate_hz = (
+            self.get_parameter("joint_torque_publish_rate_hz")
+            .get_parameter_value()
+            .double_value
+        )
+        self.joint_torques_topic = (
+            self.get_parameter("joint_torques_topic")
+            .get_parameter_value()
+            .string_value
         )
 
         self.permanent_nodes = self._build_permanent_nodes()
@@ -65,6 +96,30 @@ class DigitalTwinManager(Node):
                     "run",
                     "digital_twin_on_unity_and_ros2",
                     "joint_state_bridge_ros2unity",
+                ],
+            ),
+            # Producer of /joint_torques; started before its consumer
+            # (joint_torque_bridge_ros2unity). The publisher self-reconnects
+            # every 2s when the robot is offline, so it stays up without
+            # crashing the manager.
+            "ur_rtde_torque_publisher": ManagedProcess(
+                name="ur_rtde_torque_publisher",
+                command=[
+                    "ros2",
+                    "run",
+                    "ur_rtde_torque_bridge",
+                    "torque_publisher",
+                    "--ros-args",
+                    "-p",
+                    f"robot_ip:={self.robot_ip}",
+                    "-p",
+                    f"rtde_port:={self.rtde_port}",
+                    "-p",
+                    f"rtde_field:={self.rtde_field}",
+                    "-p",
+                    f"publish_rate_hz:={self.joint_torque_publish_rate_hz}",
+                    "-p",
+                    f"output_topic:={self.joint_torques_topic}",
                 ],
             ),
             "joint_torque_bridge_ros2unity": ManagedProcess(
