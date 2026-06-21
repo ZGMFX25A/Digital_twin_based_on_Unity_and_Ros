@@ -18,6 +18,9 @@
   <depend>ur_msgs</depend>
   <depend>controller_manager_msgs</depend>
   <depend>teleop_msgs</depend>
+  <depend>control_msgs</depend>
+  <depend>std_srvs</depend>
+  <depend>trajectory_msgs</depend>
 
   <!-- Runtime-only: the manager spawns ur_rtde_torque_bridge's
        torque_publisher executable as a permanent node. -->

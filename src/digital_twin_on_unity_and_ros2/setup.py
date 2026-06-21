@@ -13,6 +13,7 @@ setup(
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
         ('share/' + package_name + '/launch', glob('launch/*.launch.py')),
+        ('share/' + package_name + '/config', glob('config/*.yaml')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -73,6 +74,16 @@ setup(
                 'twist_display_conditioner_ros2unity = '
                 'digital_twin_on_unity_and_ros2.command_bridges.'
                 'twist_display_conditioner_ros2unity:main'
+            ),
+            (
+                'keyboard_unity_servo = '
+                'digital_twin_on_unity_and_ros2.command_bridges.'
+                'keyboard_unity_servo_ros2unity:main'
+            ),
+            (
+                'teleop_enable_bridge = '
+                'digital_twin_on_unity_and_ros2.command_bridges.'
+                'teleop_enable_bridge_ros2unity:main'
             ),
             'digital_twin_manager = manager.digital_twin_manager_node:main',
         ],
