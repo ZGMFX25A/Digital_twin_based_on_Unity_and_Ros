@@ -408,17 +408,11 @@ topic contract) and the `keyboard_unity_servo` node originate from
 home / controller-switch / servo machinery, and `teleop_msgs` is vendored from
 it. Those parts are derivative works of that project and credit belongs upstream.
 
-> **Licensing status.** The upstream project carries **no explicit license**: it
-> has no `LICENSE` file, and its `package.xml` declares `TODO: License
-> declaration`. Absent a license grant, the code defaults to **all rights
-> reserved**.
->
-> **Implication.** The Apache-2.0 grant in *License* below does **not** extend to
-> the teleop-derived portions. Do not redistribute them without permission from
-> the upstream author.
->
-> **To resolve.** Have an explicit open-source license added upstream, after
-> which this note can be updated to match.
+> **License of the teleop-derived portions.** The upstream project provides no
+> license file, and its `package.xml` leaves the license declaration unset. Under
+> default copyright these portions are therefore all rights reserved, and the
+> Apache-2.0 grant in *License* below does not cover them. Redistributing them
+> requires permission from the upstream author.
 
 ---
 
