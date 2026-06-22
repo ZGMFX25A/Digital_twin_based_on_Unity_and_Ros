@@ -137,9 +137,9 @@ flowchart LR
 `keyboard_unity_servo` is a port of the teleop repo's `keyboard_servo` (home /
 controller-switch / servo logic copied verbatim) whose terminal-stdin input is
 replaced by the `/unity/teleop/keys` topic, publishing a continuous twist at a
-fixed rate from the held-key set. Unity-side behaviour, the gamepad Joy-index
-contract, the key table, and the mandatory stop handshake are documented in
-[`plan/shared/md/2026-06-22_unity_teleop_control.md`](plan/shared/md/2026-06-22_unity_teleop_control.md).
+fixed rate from the held-key set. The Unity-side behaviour, the gamepad
+Joy-index contract, the key table, and the mandatory stop handshake are
+delivered with the Unity control panel script (`UR7eTeleopControlPanel.cs`).
 
 ---
 
@@ -336,8 +336,7 @@ The Unity project uses
 subscribe to `/unity/*` (and, only via the optional `UR7eTeleopControlPanel.cs`,
 to publish teleop input). Regenerate message types in Unity (ROS-TCP-Connector →
 *Generate ROS Messages*, pointed at `digital_twin_interfaces`) whenever a `.msg`
-changes. Reference C# scripts and `.msg` snapshots are kept in
-`plan/shared/` (the WSL↔Windows handoff package).
+changes. The reference C# scripts live in the Unity project.
 
 | Script | Topic |
 | --- | --- |
