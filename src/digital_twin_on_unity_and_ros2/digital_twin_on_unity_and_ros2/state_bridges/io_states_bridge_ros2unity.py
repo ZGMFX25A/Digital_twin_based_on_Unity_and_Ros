@@ -7,13 +7,12 @@ from digital_twin_interfaces.msg import IoStatesUnity
 
 
 class IoStatesBridgeROS2Unity(Node):
-    """Unity forwarding layer for UR digital/analog IO.
+    """Unity forwarding layer for UR digital/analog IO."""
 
-    Subscribes to the driver's /io_and_status_controller/io_states
-    (ur_msgs/IOStates, reliable/volatile) and republishes it as the flat
-    IoStatesUnity message on /unity/io_states for an IO panel. Read-only:
-    this never writes IO, it only mirrors state.
-    """
+    # Subscribes to the driver's /io_and_status_controller/io_states
+    # (ur_msgs/IOStates, reliable/volatile) and republishes it as the flat
+    # IoStatesUnity message on /unity/io_states for an IO panel. Read-only:
+    # this never writes IO, it only mirrors state.
 
     def __init__(self):
         super().__init__("io_states_bridge")

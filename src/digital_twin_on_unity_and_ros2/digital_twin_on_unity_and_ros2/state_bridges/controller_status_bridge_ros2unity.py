@@ -7,13 +7,12 @@ from digital_twin_interfaces.msg import ControllerStatusUnity
 
 
 class ControllerStatusBridgeROS2Unity(Node):
-    """Unity forwarding layer for ros2_control controller states.
+    """Unity forwarding layer for ros2_control controller states."""
 
-    Periodically calls /controller_manager/list_controllers and republishes
-    the controller names and lifecycle states as ControllerStatusUnity on
-    /unity/controller_status, so Unity can show which controllers are active.
-    Read-only: it queries, it never switches controllers.
-    """
+    # Periodically calls /controller_manager/list_controllers and republishes
+    # the controller names and lifecycle states as ControllerStatusUnity on
+    # /unity/controller_status, so Unity can show which controllers are active.
+    # Read-only: it queries, it never switches controllers.
 
     def __init__(self):
         super().__init__("controller_status_bridge")

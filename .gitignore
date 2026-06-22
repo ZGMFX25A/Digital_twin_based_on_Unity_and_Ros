@@ -7,6 +7,7 @@ plan/
 
 __pycache__/
 *.pyc
+.pytest_cache/
 
 .vscode/
 .agents/

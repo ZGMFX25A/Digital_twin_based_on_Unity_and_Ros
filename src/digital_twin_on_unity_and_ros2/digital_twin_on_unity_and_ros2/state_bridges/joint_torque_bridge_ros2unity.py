@@ -7,15 +7,14 @@ from digital_twin_interfaces.msg import JointTorqueUnity
 
 
 class JointTorqueBridgeROS2Unity(Node):
-    """Unity forwarding layer for joint torques.
+    """Unity forwarding layer for joint torques."""
 
-    Subscribes to the intermediate /joint_torques topic (a standard
-    sensor_msgs/JointState carrying effort in N.m, published by the
-    pluggable data-source layer) and republishes it as JointTorqueUnity on
-    /unity/joint_torques. This node does no abstraction on purpose: the whole
-    message mapping lives in one callback, so adapting to a different upstream
-    format only means editing joint_state_to_unity below.
-    """
+    # Subscribes to the intermediate /joint_torques topic (a standard
+    # sensor_msgs/JointState carrying effort in N.m, published by the
+    # pluggable data-source layer) and republishes it as JointTorqueUnity on
+    # /unity/joint_torques. This node does no abstraction on purpose: the whole
+    # message mapping lives in one callback, so adapting to a different upstream
+    # format only means editing joint_state_to_unity below.
 
     def __init__(self):
         super().__init__("joint_torque_bridge")

@@ -7,12 +7,11 @@ from digital_twin_interfaces.msg import ToolDataUnity
 
 
 class ToolDataBridgeROS2Unity(Node):
-    """Unity forwarding layer for UR tool flange data.
+    """Unity forwarding layer for UR tool flange data."""
 
-    Subscribes to /io_and_status_controller/tool_data (ur_msgs/ToolDataMsg)
-    and republishes voltage/current/temperature/mode as ToolDataUnity on
-    /unity/tool_data, mapping tool_mode to a human label. Read-only.
-    """
+    # Subscribes to /io_and_status_controller/tool_data (ur_msgs/ToolDataMsg)
+    # and republishes voltage/current/temperature/mode as ToolDataUnity on
+    # /unity/tool_data, mapping tool_mode to a human label. Read-only.
 
     TOOL_MODE_LABELS = {
         249: "BOOTLOADER",

@@ -19,14 +19,14 @@ MODE_LABELS = {
 
 
 class CommandSupervisorROS2Unity(Node):
-    """Read-only observer of the teleoperation command stream.
+    """Read-only observer of the teleoperation command stream."""
 
-    Subscribes to the teleop package's command/status/validated topics and
-    mirrors them under /unity/cmd_observed/* for command-intent visualization
-    in the digital twin. STRICTLY READ-ONLY: this node publishes ONLY on
-    /unity/cmd_observed/* and never writes to /teleop/*, /servo_node/* or any
-    controller. teleop_msgs is converted to *Unity so Unity needs no teleop_msgs.
-    """
+    # Subscribes to the teleop package's command/status/validated topics and
+    # mirrors them under /unity/cmd_observed/* for command-intent visualization
+    # in the digital twin. STRICTLY READ-ONLY: this node publishes ONLY on
+    # /unity/cmd_observed/* and never writes to /teleop/*, /servo_node/* or any
+    # controller. teleop_msgs is converted to *Unity so Unity needs no
+    # teleop_msgs.
 
     def __init__(self):
         super().__init__("command_supervisor")

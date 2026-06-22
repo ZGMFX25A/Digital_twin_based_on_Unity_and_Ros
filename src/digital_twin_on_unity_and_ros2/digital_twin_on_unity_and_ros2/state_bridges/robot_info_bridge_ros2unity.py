@@ -8,13 +8,12 @@ from digital_twin_interfaces.msg import RobotInfoUnity
 
 
 class RobotInfoBridgeROS2Unity(Node):
-    """Unity forwarding layer for low-rate UR informational state.
+    """Unity forwarding layer for low-rate UR informational state."""
 
-    Polls read-only UR services (software version, loaded program, program
-    state) at a low rate and republishes them as RobotInfoUnity on
-    /unity/robot_info. Kept separate from the high-rate /unity/robot_status.
-    Last-known values are retained on service timeout. Read-only.
-    """
+    # Polls read-only UR services (software version, loaded program, program
+    # state) at a low rate and republishes them as RobotInfoUnity on
+    # /unity/robot_info. Kept separate from the high-rate /unity/robot_status.
+    # Last-known values are retained on service timeout. Read-only.
 
     def __init__(self):
         super().__init__("robot_info_bridge")
