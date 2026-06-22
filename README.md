@@ -190,6 +190,7 @@ exit. The manager launches them via `ros2 run`; executable names are stable.
 | `robot_info_bridge_ros2unity` | polls UR read-only services → `/unity/robot_info` |
 | `command_supervisor_ros2unity` | observes `teleoperation_general_ros2` → `/unity/cmd_observed/*` (read-only) |
 | `twist_display_conditioner_ros2unity` | stabilises observed Twist for Unity → `/unity/cmd_display/twist` (read-only) |
+| `robot_program_watchdog` | re-sends the UR external-control program (`resend_robot_program`) if it drops, but only while the control stack is online (gated on `/teleop/command` publishers) |
 | `ros_tcp_endpoint default_server_endpoint` | bridges `/unity/*` to Unity over TCP |
 
 `ur_rtde_torque_bridge` opens an independent RTDE receive-only connection and
@@ -200,6 +201,15 @@ address Unity connects to). A wrong/offline `robot_ip` only makes the publisher
 retry; it does not crash or thrash the manager. It is still pluggable and keeps
 its own standalone launch for debugging. See
 [`src/ur_rtde_torque_bridge/README.md`](src/ur_rtde_torque_bridge/README.md).
+
+`robot_program_watchdog` keeps the UR headless external-control program alive
+**during teleoperation**. That program
+(`/io_and_status_controller/robot_program_running`) sometimes drops on its own;
+once it does, motion commands stop reaching the robot. The watchdog auto-calls
+`resend_robot_program`, but **only while the control stack is online** — detected
+via publishers on `/teleop/command` — so it never revives external control
+unsolicited. It self-throttles (false-state debounce, resend cooldown, and a
+backoff cap after repeated failures). It runs the same on a real robot or URSim.
 
 ---
 
@@ -248,6 +258,15 @@ sourced first).
 
 ## Running the system
 
+The robot can be **URSim (simulator, no hardware)** or a **real UR7e**. Only
+step 1 and the `robot_ip` you pass differ; everything after step 1 is identical.
+
+| | URSim (no hardware) | Real UR7e |
+| --- | --- | --- |
+| Step 1 | run the `ursim_e-series` container, then in PolyScope: power on + enable **Remote Control** | power on, release brakes, enable **Remote Control**, confirm network reachability |
+| `robot_ip` (steps 2–3) | URSim bridge IP (e.g. `10.255.255.254`) | the robot's real IP |
+| External-control program | started headless by the driver; `robot_program_watchdog` resends it if it drops during teleop | identical |
+
 ```bash
 # 1. Start the robot — URSim (boots in ~30 s; PolyScope UI at http://localhost:6080):
 docker run --rm -it -e ROBOT_MODEL=UR7E -p 5900:5900 -p 6080:6080 \
@@ -279,6 +298,17 @@ ros2 topic echo --once /unity/robot_status
 ros2 topic hz   /unity/tcp_pose
 ros2 topic echo --once /unity/joint_torques   # needs a reachable robot_ip (RTDE)
 ```
+
+If teleoperation stops moving the robot, check the UR external-control program
+(same for URSim and a real robot):
+
+```bash
+ros2 topic echo --once /io_and_status_controller/robot_program_running
+# false → ros2 service call /io_and_status_controller/resend_robot_program std_srvs/srv/Trigger
+```
+
+While the teleop control stack is running, `robot_program_watchdog` does this
+automatically (see Runtime nodes).
 
 ---
 
@@ -335,13 +365,33 @@ changes. Reference C# scripts and `.msg` snapshots are kept in
 | `ur_msgs` | [ros-industrial/ur_msgs](https://github.com/ros-industrial/ur_msgs) (`humble`) | Vendored under `src/third_party/` |
 | `ur_dashboard_msgs` | [UniversalRobots/Universal_Robots_ROS2_Driver](https://github.com/UniversalRobots/Universal_Robots_ROS2_Driver) (`humble`) | Vendored under `src/third_party/` |
 | `teleop_msgs` | [ning2407/Teleoperation_general_ros2](https://github.com/ning2407/Teleoperation_general_ros2) | Vendored under `src/third_party/` |
+| Teleop command pipeline & `keyboard_unity_servo` logic | [ning2407/Teleoperation_general_ros2](https://github.com/ning2407/Teleoperation_general_ros2) | This repo's control nodes target its `teleop_manager`; `keyboard_unity_servo` is a port of its `keyboard_servo` — see Attribution below |
 
 See [`src/third_party/README.md`](src/third_party/README.md) for the vendoring
 policy and re-sync commands.
+
+### Attribution & licensing of teleop-derived code
+
+The teleoperation command pipeline (`teleop_manager` and the validated/servo
+topic contract) and the `keyboard_unity_servo` node originate from
+[ning2407/Teleoperation_general_ros2](https://github.com/ning2407/Teleoperation_general_ros2):
+`keyboard_unity_servo` ports that project's `keyboard_servo` key mapping and its
+home / controller-switch / servo machinery, and `teleop_msgs` is vendored from
+it. Those parts are derivative works of that project and credit belongs upstream.
+
+> **Licensing note.** As of this writing the upstream project declares **no
+> explicit license** (no `LICENSE` file; `package.xml` carries
+> `TODO: License declaration`). With no license granted, that code is by default
+> **all rights reserved**. Treat the teleop-derived portions accordingly and
+> obtain the upstream author's permission before redistributing them. If the
+> upstream is the same author/collaboration, please add an explicit license
+> upstream so this dependency can be cleared.
 
 ---
 
 ## License
 
 Copyright 2026 HAOYU LUO. Licensed under the Apache License 2.0; see
-[LICENSE](LICENSE) and [NOTICE](NOTICE).
+[LICENSE](LICENSE) and [NOTICE](NOTICE). **This Apache-2.0 grant covers this
+repository's own original code only**, not the upstream-derived teleop portions
+described under Attribution above (their licensing is unresolved upstream).

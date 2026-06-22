@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import fcntl
 import os
 import signal
 import subprocess
@@ -8,6 +9,28 @@ from typing import Dict, List
 
 import rclpy
 from rclpy.node import Node
+
+
+MANAGER_LOCK_PATH = "/tmp/digital_twin_manager.lock"
+
+
+def acquire_manager_lock():
+    """Prevent multiple supervisors from spawning competing TCP endpoints."""
+    lock_file = open(MANAGER_LOCK_PATH, "a+", encoding="ascii")
+    try:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        lock_file.close()
+        raise RuntimeError(
+            "digital_twin_manager is already running; stop the existing "
+            "instance before launching another"
+        ) from None
+
+    lock_file.seek(0)
+    lock_file.truncate()
+    lock_file.write(f"{os.getpid()}\n")
+    lock_file.flush()
+    return lock_file
 
 
 @dataclass
@@ -194,6 +217,19 @@ class DigitalTwinManager(Node):
                     "twist_display_conditioner_ros2unity",
                 ],
             ),
+            # Revives the UR headless external-control program when it drops,
+            # but only while the control stack is online (gated on publishers of
+            # /teleop/command). Always-on here so it is ready the moment teleop
+            # starts; it self-throttles and only acts when control is active.
+            "robot_program_watchdog": ManagedProcess(
+                name="robot_program_watchdog",
+                command=[
+                    "ros2",
+                    "run",
+                    "digital_twin_on_unity_and_ros2",
+                    "robot_program_watchdog",
+                ],
+            ),
             "ros_tcp_endpoint": ManagedProcess(
                 name="ros_tcp_endpoint",
                 command=[
@@ -282,6 +318,7 @@ class DigitalTwinManager(Node):
 
 
 def main(args=None):
+    manager_lock = acquire_manager_lock()
     rclpy.init(args=args)
     node = DigitalTwinManager()
 
@@ -293,6 +330,7 @@ def main(args=None):
         node.shutdown_processes()
         node.destroy_node()
         rclpy.shutdown()
+        manager_lock.close()
 
 
 if __name__ == "__main__":

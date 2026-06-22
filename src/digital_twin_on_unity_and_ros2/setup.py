@@ -85,6 +85,11 @@ setup(
                 'digital_twin_on_unity_and_ros2.command_bridges.'
                 'teleop_enable_bridge_ros2unity:main'
             ),
+            (
+                'robot_program_watchdog = '
+                'digital_twin_on_unity_and_ros2.command_bridges.'
+                'robot_program_watchdog_ros2unity:main'
+            ),
             'digital_twin_manager = manager.digital_twin_manager_node:main',
         ],
     },
