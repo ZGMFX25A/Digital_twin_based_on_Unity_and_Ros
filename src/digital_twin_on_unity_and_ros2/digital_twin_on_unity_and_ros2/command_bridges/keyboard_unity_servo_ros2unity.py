@@ -426,7 +426,11 @@ class KeyboardUnityServoROS2Unity(Node):
                 self.stop_moveit_servo()
                 if not self.switch_controllers(
                     activate=[self.trajectory_controller],
-                    deactivate=[self.servo_controller],
+                    deactivate=(
+                        [self.servo_controller]
+                        if mode == ControllerMode.SERVO
+                        else []
+                    ),
                 ):
                     return
 
@@ -479,11 +483,16 @@ class KeyboardUnityServoROS2Unity(Node):
             self.stop_moveit_servo()
             self.switch_controllers(
                 activate=[self.trajectory_controller],
-                deactivate=[self.servo_controller],
+                deactivate=(
+                    [self.servo_controller]
+                    if mode == ControllerMode.SERVO
+                    else []
+                ),
             )
 
     def switch_to_servo_controller(self) -> bool:
         """Activate the servo controller, seeding it with current joints."""
+        mode = self.get_controller_mode()
         self.stop_moveit_servo()
         seed_positions = self.current_joint_positions_for_servo()
         if self.seed_servo_on_switch and seed_positions is not None:
@@ -491,7 +500,11 @@ class KeyboardUnityServoROS2Unity(Node):
 
         switched = self.switch_controllers(
             activate=[self.servo_controller],
-            deactivate=[self.trajectory_controller],
+            deactivate=(
+                [self.trajectory_controller]
+                if mode == ControllerMode.TRAJECTORY
+                else []
+            ),
         )
         if not switched:
             return False

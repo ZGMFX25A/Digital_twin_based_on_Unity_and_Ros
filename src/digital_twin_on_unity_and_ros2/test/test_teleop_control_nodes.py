@@ -90,6 +90,44 @@ def test_held_keys_drive_publish_tick(keyboard_node):
     assert kwargs["log"] is False
 
 
+def test_toggle_from_unknown_activates_trajectory_without_deactivation(
+    keyboard_node,
+):
+    keyboard_node.get_controller_mode = MagicMock(
+        return_value=kbd.ControllerMode.UNKNOWN
+    )
+    keyboard_node.stop_moveit_servo = MagicMock()
+    keyboard_node.switch_controllers = MagicMock(return_value=True)
+
+    keyboard_node.toggle_motion_controller()
+
+    keyboard_node.switch_controllers.assert_called_once_with(
+        activate=[keyboard_node.trajectory_controller],
+        deactivate=[],
+    )
+
+
+def test_switch_to_servo_from_unknown_does_not_deactivate_trajectory(
+    keyboard_node,
+):
+    keyboard_node.get_controller_mode = MagicMock(
+        return_value=kbd.ControllerMode.UNKNOWN
+    )
+    keyboard_node.stop_moveit_servo = MagicMock()
+    keyboard_node.current_joint_positions_for_servo = MagicMock(
+        return_value=None
+    )
+    keyboard_node.switch_controllers = MagicMock(return_value=True)
+    keyboard_node.reset_moveit_servo_status = MagicMock()
+    keyboard_node.start_moveit_servo = MagicMock()
+
+    assert keyboard_node.switch_to_servo_controller() is True
+    keyboard_node.switch_controllers.assert_called_once_with(
+        activate=[keyboard_node.servo_controller],
+        deactivate=[],
+    )
+
+
 def _mock_enable_client(node):
     node.client.wait_for_service = MagicMock(return_value=True)
     node.client.call_async = MagicMock(return_value=MagicMock())
