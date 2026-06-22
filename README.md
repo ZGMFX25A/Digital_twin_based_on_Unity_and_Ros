@@ -254,6 +254,27 @@ source install/setup.bash
 Rebuild after code changes with the same `colcon build` (UR driver workspace
 sourced first).
 
+**3. Teleoperation stack** (optional — only for the control stack in step 5 of
+*Running the system*). The `teleop_manager` that turns `/teleop/command` into
+robot motion lives in the separate
+[`teleoperation_general_ros2`](https://github.com/ning2407/Teleoperation_general_ros2)
+repo; this workspace only vendors its `teleop_msgs`. Build it in its own
+workspace (sourcing the UR driver first, so the controller interfaces resolve):
+
+```bash
+mkdir -p ~/teleop_ws/src && cd ~/teleop_ws
+git clone https://github.com/ning2407/Teleoperation_general_ros2.git \
+  src/teleoperation_general_ros2
+
+source ~/ur_ros2_ws/install/setup.bash   # UR driver workspace, BEFORE building
+colcon build --packages-select teleoperation_general teleop_msgs
+source install/setup.bash
+```
+
+The upstream repo is the authoritative source for its build and launch steps and
+any extra dependencies; the licensing caveat under *Attribution* below applies to
+this stack.
+
 ---
 
 ## Running the system
@@ -285,8 +306,17 @@ source install/setup.bash
 ros2 launch digital_twin_on_unity_and_ros2 digital_twin_manager.launch.py \
   ros_tcp_port:=10000 robot_ip:=10.255.255.254
 
-# 4. (Optional) Teleop control stack — gamepad/keyboard driving via Unity.
-#    Requires the teleoperation_general_ros2 stack (teleop_manager) running too.
+# 4. (Optional) Teleoperation stack — the upstream teleop_manager that turns
+#    /teleop/command into robot motion (separate teleoperation_general_ros2 repo,
+#    built per Setup step 3). start_observation:=true also runs its
+#    observation_publisher feeding the /teleop/* topics this workspace mirrors:
+source ~/teleop_ws/install/setup.bash
+ros2 launch teleoperation_general teleop_core.launch.py start_observation:=true
+
+# 5. (Optional) Unity teleop input bridge — lets Unity drive the stack from step 4
+#    with a gamepad/keyboard. keyboard_unity_servo replaces the upstream
+#    terminal-stdin keyboard_servo, so do NOT run that node here:
+source install/setup.bash
 ros2 launch digital_twin_on_unity_and_ros2 unity_teleop_control.launch.py
 ```
 
