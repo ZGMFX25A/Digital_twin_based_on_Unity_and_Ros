@@ -55,12 +55,17 @@ ros2 launch ur_rtde_torque_bridge torque_publisher.launch.py \
 
 ## Pluggable (by design)
 
-1. **Optional** — the digital twin manager does **not** launch this package. Start
-   it only when you want joint torques. Without it, everything else works; only the
-   Unity torque panel has no data.
-2. **Removable** — depends only on `rclpy` + `sensor_msgs`, with nothing in the
-   workspace depending on it. Delete `src/ur_rtde_torque_bridge/` and the workspace
-   still builds.
+1. **Managed, but degrades gracefully** — the digital twin manager now starts this
+   package's `torque_publisher` as a permanent node, targeting the `robot_ip` launch
+   argument. A wrong/offline `robot_ip` only makes it retry (it does not crash or
+   thrash the manager), so the rest of the twin works regardless; only the Unity
+   torque panel has no data. The standalone `launch/torque_publisher.launch.py`
+   remains for debugging.
+2. **Removable (with two edits)** — depends only on `rclpy` + `sensor_msgs`. The
+   manager now references it at runtime, so to delete `src/ur_rtde_torque_bridge/`
+   also remove the `ur_rtde_torque_publisher` permanent node from
+   `digital_twin_manager_node.py` and the `<exec_depend>` from the manager's
+   `package.xml`; the workspace then still builds.
 3. **Replaceable** — any other source can publish `/joint_torques`
    (`sensor_msgs/JointState`, effort = N·m) and drive the same Unity panel with no
    code change here. For a quick test:

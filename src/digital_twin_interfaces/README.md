@@ -17,7 +17,9 @@ to the fixed UR7e joint sequence. `efforts` is the driver's `actual_current`
 (motor **current in A**, *not* torque); real torque is on `/unity/joint_torques`.
 
 **`JointTorqueUnity`** — `stamp`, `names[]`, `torques_nm[]` (**N·m**), in fixed
-UR7e order. Published only while `ur_rtde_torque_bridge` is running.
+UR7e order. Sourced from `ur_rtde_torque_bridge`, which the manager now starts as a
+permanent node (targeting `robot_ip`); zero/idle until that RTDE link reaches the
+robot.
 
 **`TcpPoseUnity`** — `stamp`, `frame_id`, `position_x/y/z` (**m**),
 `orientation_x/y/z/w` (quaternion). Frame is `base`; ROS→Unity coordinate
@@ -54,6 +56,11 @@ again).
 **`CmdStatusUnity`** — observed teleop manager status: `stamp`, `active_mode` +
 `active_mode_label`, `enabled`, `emergency_stop`, `safety_ok`, `input_alive`,
 `command_timeout`, `command_age`, `error_code`, `last_stop_reason`, `message`.
+
+**`TeleopKeysUnity`** — the one **Unity → ROS** message (published by Unity, not a
+`/unity/*` state topic): `held_keys` (jog keys currently held, e.g. `"wq"`) and
+`action_key` (one momentary action this frame: `""`, `space`, `h`, `c`, `r`, `z`,
+`x`). Consumed by `keyboard_unity_servo` in the optional control stack.
 
 ## Coordinate frames
 

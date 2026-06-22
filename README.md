@@ -4,16 +4,21 @@ ROS 2 backend for a Unity-based digital twin of the Universal Robots **UR7e**
 collaborative robot. It subscribes to the UR ROS 2 driver, converts robot state
 into Unity-friendly messages, and streams them to Unity over the ROS-TCP-Endpoint.
 
-- **Stage:** read-only state synchronisation — no commands are sent to the robot.
+- **Stage:** read-only state synchronisation, plus an optional Unity-driven
+  teleoperation control stack (launched separately).
 - **Platform:** ROS 2 Humble on Ubuntu 22.04 (WSL2 supported).
 - **Robot:** Universal Robots UR7e (e-Series), real or URSim.
 
 ROS 2 on Linux/WSL produces robot state; Unity on the host renders the twin. The
-two halves talk only through the ROS graph and a single TCP bridge. This
-workspace is strictly read-only: it never publishes to `/teleop/*` or any
-controller command interface. Command/teleoperation lives in the separate
+two halves talk only through the ROS graph and a single TCP bridge. The always-on
+state stack (the `digital_twin_manager`) is read-only: it never publishes to
+`/teleop/*` or any controller command interface. Teleoperation itself lives in the
+separate
 [`teleoperation_general_ros2`](https://github.com/ning2407/Teleoperation_general_ros2)
-repo, which this workspace only observes and mirrors to `/unity/cmd_observed/*`.
+repo, which this workspace observes and mirrors to `/unity/cmd_observed/*`. An
+**optional control stack** (`unity_teleop_control.launch.py`, **not** part of the
+always-on manager) lets Unity drive that teleop pipeline with a gamepad or
+keyboard — it is the only part of this workspace that writes commands.
 
 ---
 
@@ -23,7 +28,7 @@ repo, which this workspace only observes and mirrors to `/unity/cmd_observed/*`.
 flowchart LR
     robot["Real UR7e / URSim"]
     driver["UR ROS 2 Driver<br/>controllers + broadcasters"]
-    torque["ur_rtde_torque_bridge<br/>optional · RTDE recv-only"]
+    torque["ur_rtde_torque_bridge<br/>managed · RTDE recv-only"]
     teleop["teleoperation_general_ros2<br/>separate repo · observed"]
     unity["Unity<br/>ROS-TCP-Connector"]
 
@@ -56,7 +61,7 @@ Robot state out of the UR driver (plus optional joint torques) → `/unity/*`.
 ```mermaid
 flowchart LR
     robot["UR7e / URSim"] -->|Ethernet / RTDE| driver["UR ROS 2 driver"]
-    torque["ur_rtde_torque_bridge<br/>optional · RTDE recv-only"]
+    torque["ur_rtde_torque_bridge<br/>managed · RTDE recv-only"]
     driver -->|"/joint_states, /tcp_pose,<br/>robot/safety mode, io_states,<br/>tool_data, speed_scaling, wrench"| sb["state_bridges/"]
     torque -->|"/joint_torques (N·m)"| sb
     sb -->|"/unity/*"| ep["ros_tcp_endpoint<br/>:10000"]
@@ -104,6 +109,38 @@ emergency-stop, and unsafe status clear the display immediately. These defaults
 are ROS parameters. The node only changes the Unity display stream; it does not
 make the Servo control input continuous.
 
+### Control stream (optional, opt-in)
+
+Launched separately from the read-only manager via `unity_teleop_control.launch.py`.
+Unity sends **raw input only** (no coordinate conversion); the input→motion mapping
+lives ROS-side, so this stack maximally reuses `teleoperation_general_ros2`.
+
+```mermaid
+flowchart LR
+    unity["Unity<br/>UR7eTeleopControlPanel"]
+    unity -->|"/joy"| xbox["teleop xbox_servo<br/>(separate repo)"]
+    unity -->|"/unity/teleop/keys"| kbd["keyboard_unity_servo<br/>(this ws)"]
+    unity -->|"/unity/teleop/enable"| en["teleop_enable_bridge<br/>(this ws)"]
+    xbox --> tc["/teleop/command"]
+    kbd --> tc
+    en -->|"set_teleop_enable"| mgr["teleop_manager<br/>(separate repo)"]
+    tc --> mgr
+    mgr -->|"validated / servo"| robot["robot / URSim"]
+```
+
+| Topic (Unity → ROS) | Type | Consumer |
+| --- | --- | --- |
+| `/joy` | `sensor_msgs/Joy` | `xbox_servo` (teleop repo, reused as-is) |
+| `/unity/teleop/keys` | `TeleopKeysUnity` | `keyboard_unity_servo` (this ws) |
+| `/unity/teleop/enable` | `std_msgs/Bool` | `teleop_enable_bridge` → `/teleop/set_teleop_enable` |
+
+`keyboard_unity_servo` is a port of the teleop repo's `keyboard_servo` (home /
+controller-switch / servo logic copied verbatim) whose terminal-stdin input is
+replaced by the `/unity/teleop/keys` topic, publishing a continuous twist at a
+fixed rate from the held-key set. Unity-side behaviour, the gamepad Joy-index
+contract, the key table, and the mandatory stop handshake are documented in
+[`plan/shared/md/2026-06-22_unity_teleop_control.md`](plan/shared/md/2026-06-22_unity_teleop_control.md).
+
 ---
 
 ## Compatibility
@@ -144,7 +181,8 @@ exit. The manager launches them via `ros2 run`; executable names are stable.
 | Process | Function |
 | --- | --- |
 | `joint_state_bridge_ros2unity` | `/joint_states` → `/unity/joint_states` |
-| `joint_torque_bridge_ros2unity` | `/joint_torques` → `/unity/joint_torques` (idle until a torque source publishes) |
+| `ur_rtde_torque_publisher` (`ur_rtde_torque_bridge`) | RTDE receive-only → `/joint_torques` (N·m); targets the `robot_ip` argument |
+| `joint_torque_bridge_ros2unity` | `/joint_torques` → `/unity/joint_torques` (zero/idle until the torque source reaches the robot) |
 | `ur_state_bridge_ros2unity` | UR state → `/unity/tcp_pose`, `/unity/robot_status`, `/unity/wrench` |
 | `io_states_bridge_ros2unity` | `/io_and_status_controller/io_states` → `/unity/io_states` |
 | `tool_data_bridge_ros2unity` | `/io_and_status_controller/tool_data` → `/unity/tool_data` |
@@ -154,9 +192,13 @@ exit. The manager launches them via `ros2 run`; executable names are stable.
 | `twist_display_conditioner_ros2unity` | stabilises observed Twist for Unity → `/unity/cmd_display/twist` (read-only) |
 | `ros_tcp_endpoint default_server_endpoint` | bridges `/unity/*` to Unity over TCP |
 
-`ur_rtde_torque_bridge` is **pluggable** and **not** started by the manager. It
-opens an independent RTDE receive-only connection and publishes real joint
-torques (N·m) on `/joint_torques`. See
+`ur_rtde_torque_bridge` opens an independent RTDE receive-only connection and
+publishes real joint torques (N·m) on `/joint_torques`. The manager starts its
+`torque_publisher` as a permanent node, connecting to the **`robot_ip`** launch
+argument — the RTDE target IP, **distinct from `ros_ip`** (the endpoint bind
+address Unity connects to). A wrong/offline `robot_ip` only makes the publisher
+retry; it does not crash or thrash the manager. It is still pluggable and keeps
+its own standalone launch for debugging. See
 [`src/ur_rtde_torque_bridge/README.md`](src/ur_rtde_torque_bridge/README.md).
 
 ---
@@ -217,11 +259,16 @@ source ~/ur_ros2_ws/install/setup.bash
 ros2 launch ur_robot_driver ur_control.launch.py \
   ur_type:=ur7e robot_ip:=10.255.255.254 launch_rviz:=false   # URSim bridge IP
 
-# 3. Launch the digital twin manager (leave ros_ip default — see Networking):
+# 3. Launch the digital twin manager (leave ros_ip default — see Networking).
+#    robot_ip is the RTDE target for joint torques (the URSim bridge IP here):
 source ~/ur_ros2_ws/install/setup.bash
 source install/setup.bash
 ros2 launch digital_twin_on_unity_and_ros2 digital_twin_manager.launch.py \
-  ros_tcp_port:=10000
+  ros_tcp_port:=10000 robot_ip:=10.255.255.254
+
+# 4. (Optional) Teleop control stack — gamepad/keyboard driving via Unity.
+#    Requires the teleoperation_general_ros2 stack (teleop_manager) running too.
+ros2 launch digital_twin_on_unity_and_ros2 unity_teleop_control.launch.py
 ```
 
 Verify:
@@ -230,7 +277,7 @@ Verify:
 ros2 topic echo --once /unity/joint_states
 ros2 topic echo --once /unity/robot_status
 ros2 topic hz   /unity/tcp_pose
-ros2 topic echo --once /unity/joint_torques   # only with ur_rtde_torque_bridge
+ros2 topic echo --once /unity/joint_torques   # needs a reachable robot_ip (RTDE)
 ```
 
 ---
@@ -256,9 +303,10 @@ If the connection still fails with the IP correct, check the Windows firewall:
 
 The Unity project uses
 [ROS-TCP-Connector](https://github.com/Unity-Technologies/ROS-TCP-Connector) to
-subscribe to `/unity/*`. Regenerate message types in Unity (ROS-TCP-Connector →
+subscribe to `/unity/*` (and, only via the optional `UR7eTeleopControlPanel.cs`,
+to publish teleop input). Regenerate message types in Unity (ROS-TCP-Connector →
 *Generate ROS Messages*, pointed at `digital_twin_interfaces`) whenever a `.msg`
-changes. Reference C# subscribers and `.msg` snapshots are kept in
+changes. Reference C# scripts and `.msg` snapshots are kept in
 `plan/shared/` (the WSL↔Windows handoff package).
 
 | Script | Topic |
@@ -274,6 +322,7 @@ changes. Reference C# subscribers and `.msg` snapshots are kept in
 | `UR7eControllerStatusSubscriber.cs` | `/unity/controller_status` |
 | `UR7eRobotInfoSubscriber.cs` | `/unity/robot_info` |
 | `UR7eCommandObservedPanel.cs` | `/unity/cmd_observed/command` + `/status` |
+| `UR7eTeleopControlPanel.cs` | **publishes** `/joy`, `/unity/teleop/keys`, `/unity/teleop/enable` (optional teleop control) |
 
 ---
 
