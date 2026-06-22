@@ -254,7 +254,7 @@ source install/setup.bash
 Rebuild after code changes with the same `colcon build` (UR driver workspace
 sourced first).
 
-**3. Teleoperation stack** (optional — only for the control stack in step 5 of
+**3. Teleoperation stack** (optional — only for the control stack in steps 4–6 of
 *Running the system*). The `teleop_manager` that turns `/teleop/command` into
 robot motion lives in the separate
 [`teleoperation_general_ros2`](https://github.com/ning2407/Teleoperation_general_ros2)
@@ -306,14 +306,24 @@ source install/setup.bash
 ros2 launch digital_twin_on_unity_and_ros2 digital_twin_manager.launch.py \
   ros_tcp_port:=10000 robot_ip:=10.255.255.254
 
-# 4. (Optional) Teleoperation stack — the upstream teleop_manager that turns
+# 4. (Optional) MoveIt Servo — required by the teleop stack below. teleop_manager
+#    publishes Cartesian twists to /servo_node/delta_twist_cmds; the servo_node
+#    started here does the IK and writes /forward_position_controller/commands.
+#    launch_servo defaults to true, so this brings up /servo_node — and move_group,
+#    which supplies the robot_description servo_node needs (don't run servo_node_main
+#    bare). Without it, twists go nowhere and keyboard_unity_servo logs
+#    "start servo service is not available":
+source ~/ur_ros2_ws/install/setup.bash
+ros2 launch ur_moveit_config ur_moveit.launch.py ur_type:=ur7e launch_rviz:=false
+
+# 5. (Optional) Teleoperation stack — the upstream teleop_manager that turns
 #    /teleop/command into robot motion (separate teleoperation_general_ros2 repo,
 #    built per Setup step 3). start_observation:=true also runs its
 #    observation_publisher feeding the /teleop/* topics this workspace mirrors:
 source ~/teleop_ws/install/setup.bash
 ros2 launch teleoperation_general teleop_core.launch.py start_observation:=true
 
-# 5. (Optional) Unity teleop input bridge — lets Unity drive the stack from step 4
+# 6. (Optional) Unity teleop input bridge — lets Unity drive the stack from step 5
 #    with a gamepad/keyboard. keyboard_unity_servo replaces the upstream
 #    terminal-stdin keyboard_servo, so do NOT run that node here:
 source install/setup.bash
@@ -335,6 +345,15 @@ If teleoperation stops moving the robot, check the UR external-control program
 ```bash
 ros2 topic echo --once /io_and_status_controller/robot_program_running
 # false → ros2 service call /io_and_status_controller/resend_robot_program std_srvs/srv/Trigger
+```
+
+If Cartesian teleop produces no motion and `keyboard_unity_servo` logs `start
+servo service is not available`, MoveIt Servo (step 4) is not running:
+
+```bash
+ros2 node list | grep servo_node                       # expect /servo_node
+ros2 topic hz   /forward_position_controller/commands  # expect data while jogging
+# missing → launch ur_moveit.launch.py (launch_servo defaults to true)
 ```
 
 While the teleop control stack is running, `robot_program_watchdog` does this
