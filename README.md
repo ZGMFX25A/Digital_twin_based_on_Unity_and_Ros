@@ -444,7 +444,7 @@ it. Those parts are derivative works of that project and credit belongs upstream
 
 ## License
 
-Copyright 2026 HAOYU LUO. Licensed under the Apache License 2.0; see
+Authors: HAOYU LUO and David Tovmassian. Licensed under the Apache License 2.0; see
 [LICENSE](LICENSE) and [NOTICE](NOTICE). **This Apache-2.0 grant covers this
 repository's own original code only**, not the upstream-derived teleop portions
 described under Attribution above (their licensing is unresolved upstream).
