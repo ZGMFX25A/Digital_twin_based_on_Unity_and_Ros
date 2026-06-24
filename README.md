@@ -286,6 +286,7 @@ step 1 and the `robot_ip` you pass differ; everything after step 1 is identical.
 | --- | --- | --- |
 | Step 1 | run the `ursim_e-series` container, then in PolyScope: power on + enable **Remote Control** | power on, release brakes, enable **Remote Control**, confirm network reachability |
 | `robot_ip` (steps 2–3) | URSim bridge IP (e.g. `10.255.255.254`) | the robot's real IP |
+| `reverse_ip` (step 2) | omit (driver auto-detects on the same host) | **set to the Windows host IP** — the robot dials back into the driver, and from the physical LAN it cannot reach the WSL2 NAT address |
 | External-control program | started headless by the driver; `robot_program_watchdog` resends it if it drops during teleop | identical |
 
 ```bash
@@ -294,10 +295,16 @@ docker run --rm -it -e ROBOT_MODEL=UR7E -p 5900:5900 -p 6080:6080 \
   universalrobots/ursim_e-series
 #    Real UR7e: power on and confirm network reachability instead.
 
-# 2. Launch the UR driver (use the real robot IP for hardware):
+# 2. Launch the UR driver.
+#    URSim (same host — driver auto-detects the reverse connection, no reverse_ip):
 source ~/ur_ros2_ws/install/setup.bash
 ros2 launch ur_robot_driver ur_control.launch.py \
   ur_type:=ur7e robot_ip:=10.255.255.254 launch_rviz:=false   # URSim bridge IP
+#    Real UR7e: use the robot's real IP AND set reverse_ip — the robot dials back
+#    into the driver and can't reach the WSL2 NAT address, so point it at the
+#    Windows host IP (fill in <WINDOWS_HOST_IP>):
+ros2 launch ur_robot_driver ur_control.launch.py \
+  ur_type:=ur7e robot_ip:=<ROBOT_IP> reverse_ip:=<WINDOWS_HOST_IP> launch_rviz:=false
 
 # 3. Launch the digital twin manager (leave ros_ip default — see Networking).
 #    robot_ip is the RTDE target for joint torques (the URSim bridge IP here):
